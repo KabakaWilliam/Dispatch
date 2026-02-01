@@ -5,12 +5,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-## 🏎 Quickstart
+## 🏎💨 Quickstart
 ```python
 # Ask a question
-question = "How has the market price of the card 'Blue-Eyes White Dragon' moved over the last 5 years?"
+question = "How has the market price of the card 'Blue-Eyes White Dragon' moved over the last year?"
 answer = answer_me(question, AGENT_ID, max_iterations=5)
 print(answer)
+##The price decreased by 16.67% over the last year, from $150 to $125.
 ```
 
 ## ✨ Features
@@ -25,7 +26,7 @@ print(answer)
 - ⚡ **Priority-Based Commands** - Route external commands by priority level (high/normal/low)
 
 
-## � Communication & Notifications
+## 🎙 Communication & Notifications
 
 Dispatch agents can communicate with each other and external systems via **ntfy.sh**, a free real-time notification service.
 
@@ -38,7 +39,7 @@ Dispatch agents can communicate with each other and external systems via **ntfy.
 | `agent_emergencies` | Critical alerts and error notifications |
 | `agent_{name}_tasks` | Per-agent task delegation |
 
-### Configuration
+### 🛠 Configuration
 
 All channel names and ntfy settings are configurable via `.env` file:
 
@@ -66,4 +67,5 @@ AGENT_ID = f"{AGENT_NAME}_{AGENT_UUID[:8]}"
 
 This allows external systems to route commands to specific agents and track responses.
 
+### License:
 MIT
