@@ -8,8 +8,175 @@ import time
 import traceback
 import uuid
 import json
+from datetime import datetime
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # If python-dotenv is not installed, just continue
+    pass
 
 logger = logging.getLogger(__name__)
+
+# ntfy.sh configuration - load from .env or use defaults
+NTFY_BASE_URL = os.getenv("NTFY_BASE_URL", "https://ntfy.sh")
+NTFY_TIMEOUT = int(os.getenv("NTFY_TIMEOUT", "10"))
+NTFY_COMMANDS_CHANNEL = os.getenv("NTFY_COMMANDS_CHANNEL", "agent_commands")
+NTFY_SYNC_CHANNEL = os.getenv("NTFY_SYNC_CHANNEL", "agent_sync")
+NTFY_TASKS_CHANNEL_PREFIX = os.getenv("NTFY_TASKS_CHANNEL_PREFIX", "agent_")
+NTFY_EMERGENCIES_CHANNEL = os.getenv("NTFY_EMERGENCIES_CHANNEL", "agent_emergencies")
+
+
+# -----------------------------
+# ntfy.sh Communication Tools
+# -----------------------------
+def read_ntfy_messages(channel: str, limit: int = 10) -> str:
+    """
+    Read the last N messages from an ntfy.sh channel.
+    Parses JSON messages and returns them in a readable format.
+    
+    Args:
+        channel: The ntfy channel name (e.g., "agent_commands", "agent_sync")
+        limit: Number of messages to retrieve (default: 10)
+    
+    Returns:
+        Formatted string with messages or error message
+    """
+    # Use the base channel URL with ?poll=1 to get cached messages without waiting
+    url = f"{NTFY_BASE_URL}/{channel}/json?poll=1"
+    
+    try:
+        logger.info(f"Reading {limit} messages from ntfy channel: {channel}")
+        # Use stream=False and short timeout since we're using ?poll=1
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        
+        # Parse JSON Lines format (each line is a separate JSON object)
+        messages = []
+        for line in response.text.strip().split('\n'):
+            if line.strip():
+                try:
+                    msg = json.loads(line)
+                    messages.append(msg)
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse JSON message: {line}")
+        
+        if not messages:
+            return f"No messages found in channel: {channel}"
+        
+        # Return last N messages
+        recent_messages = messages[-limit:]
+        formatted = f"Messages from '{channel}' (latest {len(recent_messages)}):\n\n"
+        
+        for i, msg in enumerate(recent_messages, 1):
+            timestamp = msg.get('time', 'N/A')
+            message_text = msg.get('message', '')
+            title = msg.get('title', '')
+            
+            formatted += f"{i}. [Time: {timestamp}]\n"
+            if title:
+                formatted += f"   Title: {title}\n"
+            if message_text:
+                formatted += f"   Message: {message_text}\n"
+            
+            # Try to parse message as JSON for structured data
+            try:
+                json_data = json.loads(message_text)
+                formatted += f"   Parsed JSON: {json.dumps(json_data, indent=2)}\n"
+            except (json.JSONDecodeError, TypeError):
+                pass
+            
+            formatted += "\n"
+        
+        logger.info(f"Successfully retrieved {len(recent_messages)} messages from {channel}")
+        return formatted
+        
+    except requests.exceptions.Timeout:
+        return f"Timeout reading from ntfy channel '{channel}'. Check your connection."
+    except requests.exceptions.ConnectionError:
+        return f"Connection error reading from ntfy channel '{channel}'."
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            return f"Channel '{channel}' not found or has no messages."
+        return f"HTTP error {e.response.status_code} reading from '{channel}'."
+    except Exception as e:
+        error_msg = f"Error reading ntfy channel '{channel}': {type(e).__name__}: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+
+def post_ntfy_message(channel: str, message: str, title: str = None) -> str:
+    """
+    Post a message to an ntfy.sh channel.
+    
+    Args:
+        channel: The ntfy channel name
+        message: The message content (can be plain text or JSON string)
+        title: Optional title for the message
+    
+    Returns:
+        Success message or error description
+    """
+    url = f"{NTFY_BASE_URL}/{channel}"
+    
+    try:
+        headers = {}
+        if title:
+            headers["Title"] = title
+        
+        logger.info(f"Posting message to ntfy channel: {channel}")
+        response = requests.post(
+            url,
+            data=message.encode('utf-8'),
+            headers=headers,
+            timeout=NTFY_TIMEOUT
+        )
+        response.raise_for_status()
+        
+        logger.info(f"Successfully posted to channel '{channel}'")
+        return f"Posted to '{channel}': {message[:50]}..." if len(message) > 50 else f"Posted to '{channel}': {message}"
+        
+    except requests.exceptions.Timeout:
+        return f"Timeout posting to ntfy channel '{channel}'."
+    except requests.exceptions.ConnectionError:
+        return f"Connection error posting to ntfy channel '{channel}'."
+    except requests.exceptions.HTTPError as e:
+        return f"HTTP error {e.response.status_code} posting to '{channel}'."
+    except Exception as e:
+        error_msg = f"Error posting to ntfy channel '{channel}': {type(e).__name__}: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+
+def notify_external_system(agent_id: str, status: str, message: str, error: bool = False) -> str:
+    """
+    Notify external system (via ntfy coordination channel) about agent status.
+    
+    Args:
+        agent_id: Unique agent identifier (e.g., "agent_123")
+        status: Current agent status (e.g., "executing", "idle", "error", "complete")
+        message: Detailed message
+        error: Whether this is an error notification
+    
+    Returns:
+        Result of the notification
+    """
+    notification = {
+        "agent_id": agent_id,
+        "status": status,
+        "message": message,
+        "timestamp": datetime.utcnow().isoformat(),
+        "is_error": error
+    }
+    
+    channel = NTFY_SYNC_CHANNEL
+    title = f"Agent {agent_id} - {status.upper()}"
+    if error:
+        title += " [ERROR]"
+    
+    return post_ntfy_message(channel, json.dumps(notification), title=title)
 
 
 # -----------------------------
@@ -331,6 +498,9 @@ TOOL_REGISTRY: Dict[str, Callable[..., Any]] = {
     "notify_user": notify_user,
     "get_search_query": get_search_query,
     "search_fallback": search_fallback,
+    "read_ntfy_messages": read_ntfy_messages,
+    "post_ntfy_message": post_ntfy_message,
+    "notify_external_system": notify_external_system,
 }
 
 TOOLS_SPEC: List[Dict[str, Any]] = [
@@ -453,57 +623,144 @@ TOOLS_SPEC: List[Dict[str, Any]] = [
         },
     },
     {
-    "type": "function",
-    "function": {
-        "name": "execute_code",
-        "description": (
-            "Execute code in a sandboxed environment. Supports multiple programming languages "
-            "including Python, JavaScript, Java, C++, and more. Returns the output, errors, "
-            "and execution statistics. Use this when you need to run code to compute results, "
-            "test algorithms, or verify solutions."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "completion": {
-                    "type": "string",
-                    "description": (
-                        "The code to execute. Must be wrapped in markdown "
-                        "code blocks (```python ... ``` or ``` ... ```). The code will be "
-                        "automatically extracted from code blocks."
-                    )
+        "type": "function",
+        "function": {
+            "name": "execute_code",
+            "description": (
+                "Execute code in a sandboxed environment. Supports multiple programming languages "
+                "including Python, JavaScript, Java, C++, and more. Returns the output, errors, "
+                "and execution statistics. Use this when you need to run code to compute results, "
+                "test algorithms, or verify solutions."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "completion": {
+                        "type": "string",
+                        "description": (
+                            "The code to execute. Must be wrapped in markdown "
+                            "code blocks (```python ... ``` or ``` ... ```). The code will be "
+                            "automatically extracted from code blocks."
+                        )
+                    },
+                    "stdin": {
+                        "type": "string",
+                        "description": (
+                            "input to provide to the program via standard input (stdin). "
+                            "Use this for programs that read input interactively."
+                        )
+                    },
+                    "compile_timeout": {
+                        "type": "integer",
+                        "description": "Compilation timeout in seconds (for compiled languages like C++, Java). Default: 10",
+                        "default": 10
+                    },
+                    "run_timeout": {
+                        "type": "integer",
+                        "description": "Execution timeout in seconds. The program will be terminated if it runs longer than this. Default: 5",
+                        "default": 5
+                    },
+                    "memory_limit_mb": {
+                        "type": "integer",
+                        "description": "Memory limit in megabytes. The program will be terminated if it exceeds this limit. Default: 128",
+                        "default": 128
+                    },
+                    "language": {
+                        "type": "string",
+                        "enum": list(SUPPORTED_LANGUAGES),
+                        "description": "The programming language of the code. Default: python",
+                        "default": "python"
+                    }
                 },
-                "stdin": {
-                    "type": "string",
-                    "description": (
-                        "input to provide to the program via standard input (stdin). "
-                        "Use this for programs that read input interactively."
-                    )
+                "required": ["completion"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_ntfy_messages",
+            "description": (
+                "Read recent messages from an ntfy.sh coordination channel. Use this to check for "
+                "external commands, task delegations, or status updates from other agents. "
+                "Automatically parses JSON-formatted messages."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "channel": {
+                        "type": "string",
+                        "description": "The ntfy channel name (e.g., 'agent_commands', 'agent_sync', 'agent_{agent_id}_tasks')"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of recent messages to retrieve (default: 10, max: 100)",
+                        "default": 10
+                    }
                 },
-                "compile_timeout": {
-                    "type": "integer",
-                    "description": "Compilation timeout in seconds (for compiled languages like C++, Java). Default: 10",
-                    "default": 10
+                "required": ["channel"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "post_ntfy_message",
+            "description": (
+                "Post a message to an ntfy.sh coordination channel. Use this to send results, "
+                "status updates, or delegate tasks to other agents. Supports plain text or JSON."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "channel": {
+                        "type": "string",
+                        "description": "The ntfy channel name (e.g., 'agent_sync', 'agent_commands_result')"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "The message content (can be plain text or JSON string)"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Optional title for the message (appears in notifications)"
+                    }
                 },
-                "run_timeout": {
-                    "type": "integer",
-                    "description": "Execution timeout in seconds. The program will be terminated if it runs longer than this. Default: 5",
-                    "default": 5
+                "required": ["channel", "message"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "notify_external_system",
+            "description": (
+                "Notify the external system and other agents about your status. "
+                "Use this to report task completion, errors, or status changes."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "agent_id": {
+                        "type": "string",
+                        "description": "Your unique agent identifier (e.g., 'agent_123')"
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Current status (e.g., 'executing', 'idle', 'error', 'complete')"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Detailed status message"
+                    },
+                    "error": {
+                        "type": "boolean",
+                        "description": "Whether this is an error notification (default: false)",
+                        "default": False
+                    }
                 },
-                "memory_limit_mb": {
-                    "type": "integer",
-                    "description": "Memory limit in megabytes. The program will be terminated if it exceeds this limit. Default: 128",
-                    "default": 128
-                },
-                "language": {
-                    "type": "string",
-                    "enum": list(SUPPORTED_LANGUAGES),
-                    "description": "The programming language of the code. Default: python",
-                    "default": "python"
-                }
-            },
-            "required": ["completion"]
+                "required": ["agent_id", "status", "message"]
+            }
         }
     }
-}
 ]
