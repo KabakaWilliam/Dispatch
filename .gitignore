@@ -1,3 +1,5 @@
 .env
 *.md
+!README
+!README.md
 __pycache__
