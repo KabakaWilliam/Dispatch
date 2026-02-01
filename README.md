@@ -9,7 +9,7 @@
 ```python
 # Ask a question
 question = "How has the market price of the card 'Blue-Eyes White Dragon' moved over the last year?"
-answer = answer_me(question, AGENT_ID, max_iterations=5)
+answer = dispatch(question, AGENT_ID, max_iterations=5)
 print(answer)
 ##The price decreased by 16.67% over the last year, from $150 to $125.
 ```
