@@ -185,7 +185,7 @@ def notify_external_system(agent_id: str, status: str, message: str, error: bool
 def do_math(a: int, b: int, operation: str) -> str:
     if operation == "sum":
         result = a + b
-    if operation == "subtract":
+    elif operation == "subtract":
         result = a - b
     elif operation == "multiply":
         result = a * b
