@@ -5,6 +5,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
+## 🏎 Quickstart
+```python
+# Ask a question
+question = "How has the market price of the card 'Blue-Eyes White Dragon' moved over the last 5 years?"
+answer = answer_me(question, AGENT_ID, max_iterations=5)
+print(answer)
+```
+
 ## ✨ Features
 
 - 🏠 **100% Local** - BYOK (Bring Your Own Keys)
