@@ -21,6 +21,8 @@ print(answer)
 - 🔄 **Multi-Tool Support** - Handle multiple tool calls per turn
 - 💻 **Code Execution** - Built-in sandboxed code runner using apptainer.
 - 🎯 **Simple API** - Get started with 3 lines of code
+- 🔍 **Web Search & Research** - Built-in search capabilities for real-time information gathering
+- 📊 **Data Analysis** - Process and analyze search results to answer complex questions
 - 📢 **ntfy.sh Integration** - Real-time pub/sub messaging for multi-agent coordination
 - 🔗 **Agent Communication** - Send commands, receive status updates, and sync across agents
 - ⚡ **Priority-Based Commands** - Route external commands by priority level (high/normal/low)
