@@ -1,4 +1,4 @@
-# 🤖 Agent Starter Pack
+# 🤖 Dispatch: An Agent Starter Pack
 
 > A lightweight, local-first agentic framework for HuggingFace models with built-in tool calling
 
@@ -7,54 +7,12 @@
 
 ## ✨ Features
 
-- 🏠 **100% Local** - No API keys, no external services
+- 🏠 **100% Local** - BYOK (Bring Your Own Keys)
 - 🛠️ **Easy Tool Integration** - Add custom tools in minutes
 - 🔄 **Multi-Tool Support** - Handle multiple tool calls per turn
-- 💻 **Code Execution** - Built-in sandboxed code runner
+- 💻 **Code Execution** - Built-in sandboxed code runner using apptainer.
 - 🎯 **Simple API** - Get started with 3 lines of code
 
-## 🚀 Quick Start
-```python
-from agent_starter_pack import answer_me
-
-answer = answer_me("What is the factorial of 10? Encrypt your answer in base64 and store it in your private memory.")
-print(answer)
-```
-
-## 📦 Installation
-```bash
-pip install agent-starter-pack
-# or
-git clone https://github.com/yourusername/agent-starter-pack.git
-cd agent-starter-pack
-pip install -e .
-```
-
-## 🎯 Why This Framework?
-
-| Feature | LangChain | AutoGPT | **Agent Starter Pack** |
-|---------|-----------|---------|------------------------|
-| Local-first | ❌ | ❌ | ✅ |
-| No API required | ❌ | ❌ | ✅ |
-| Simple setup | ❌ | ❌ | ✅ |
-| Code execution | ⚠️ | ⚠️ | ✅ |
-| Learning curve | High | High | **Low** |
-
-## 📚 Examples
-
-[Include 3-5 compelling examples]
-
-## 🔧 Adding Custom Tools
-
-[Show how easy it is]
-
-## 🏗️ Architecture
-
-[Simple diagram]
-
-## 🤝 Contributing
-
-[Contribution guidelines]
 
 ## 📄 License
 
