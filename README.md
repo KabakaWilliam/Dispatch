@@ -6,12 +6,36 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
 ## 🏎💨 Quickstart
+
+Ask the agent a question and get a comprehensive research response:
+
 ```python
-# Ask a question
-question = "How has the market price of the card 'Blue-Eyes White Dragon' moved over the last year?"
+question = "How has the market price of the card 'Blue-Eyes White Dragon' moved over the last years?"
 answer = dispatch(question, AGENT_ID, max_iterations=5)
 print(answer)
-##The price decreased by 16.67% over the last year, from $150 to $125.
+```
+
+**Sample Output:**
+
+```
+The market price of the Blue-Eyes White Dragon (1st Edition) has shown significant appreciation:
+
+1. Current Prices (as of 2026):
+   - 1st Edition (LOB-001): $810.00 (PriceCharting.com)
+   - Standard Edition (LOB-001): $59.01 (PriceCharting.com)
+   - Starter Deck (SDK-001): Ranges from $299.49 (weekly sales) to $2,021.07 (monthly sales) (PriceCharting.com)
+
+2. Historical Trends:
+   - Consistent upward appreciation driven by rarity and collector demand
+   - Price spikes during major anime milestones
+   - 1st Edition extremely scarce (only 500 copies produced)
+
+3. Key Insight:
+   The card has INCREASED significantly in value, particularly for 1st Edition prints.
+
+Sources:
+- PriceCharting.com - Current market data
+- TCGPlayer.com - Historical tracking and comparative pricing
 ```
 
 ## ✨ Features
@@ -71,3 +95,15 @@ This allows external systems to route commands to specific agents and track resp
 
 ### License:
 MIT
+
+## 📚 Citation
+
+If you use Dispatch in your research or project, please cite it:
+
+```bibtex
+@software{dispatch2026,
+  title={Dispatch: An Agent Starter Pack},
+  author={Lugoloobi, William},
+  year={2026},
+  url={https://github.com/KabakaWilliam/Dispatch}
+}
